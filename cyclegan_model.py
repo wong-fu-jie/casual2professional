@@ -64,6 +64,14 @@ def residual_block(x, activation, kernel_initializer=kernel_init, kernel_size=(3
     x = layers.Conv2D(dim, kernel_size, strides=strides,
                       kernel_initializer=kernel_initializer, padding=padding, use_bias=use_bias)(x)
     x = InstanceNormalization(gamma_initializer=gamma_initializer)(x)
+
+    x = activation(x)
+
+    x = ReflectionPadding2D()(x)
+    x = layers.Conv2D(dim, kernel_size, strides=strides,
+                      kernel_initializer=kernel_initializer, padding=padding, use_bias=use_bias)(x)
+    x = InstanceNormalization(gamma_initializer=gamma_initializer)(x)
+
     x = layers.add([input_tensor, x])
 
     return x
@@ -123,9 +131,8 @@ def get_resnet_generator(num_residual_blocks, model_image_size, filters=64, num_
     model = Model(img_input, x, name=name)
     return model
 
+
 # Discriminator Model
-
-
 def get_discriminator(model_image_size, filters=64, kernel_initializer=kernel_init, num_downsampling=3, name=None):
     img_input = layers.Input(shape=model_image_size, name=name + "_img_input")
     x = layers.Conv2D(filters, (4, 4), strides=(
@@ -152,24 +159,21 @@ def get_discriminator(model_image_size, filters=64, kernel_initializer=kernel_in
 # Loss function for evaluating adversarial loss
 adv_loss_fn = MeanSquaredError()
 
+
 # Define the loss function for the generators
-
-
 def generator_loss_fn(fake):
     fake_loss = adv_loss_fn(tf.ones_like(fake), fake)
     return fake_loss
 
+
 # Define the loss function for the discriminators
-
-
 def discriminator_loss_fn(real, fake):
     real_loss = adv_loss_fn(tf.ones_like(real), real)
     fake_loss = adv_loss_fn(tf.zeros_like(fake), fake)
     return (real_loss + fake_loss) * 0.5
 
+
 # CycleGAN Class
-
-
 class CycleGan(Model):
     def __init__(self, generator_G, generator_F, discriminator_X, discriminator_Y, lambda_cycle=10.0, lambda_identity=0.5):
         super(CycleGan, self).__init__()
